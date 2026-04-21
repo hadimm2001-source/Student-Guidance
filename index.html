@@ -229,7 +229,8 @@
     <script>
         // =================================================================================
         // Gemini API Configuration
-        const apiKey = "AIzaSyDbSg5uJT7nO2LEaWydYpEX9yTkBnGjufI"; // API Key is injected by the environment automatically
+        // ⚠️ لكي يعمل الذكاء الاصطناعي عند المدير (على GitHub)، يجب وضع المفتاح الخاص بك هنا ⚠️
+        const apiKey = "AIzaSyDbSg5uJT7nO2LEaWydYpEX9yTkBnGjufI"; // ضع مفتاحك بين علامتي التنصيص
         // =================================================================================
 
         // =================================================================================
@@ -353,7 +354,10 @@
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(url, options);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    if (!response.ok) {
+                        const err = await response.json().catch(()=>({}));
+                        throw new Error(err.error?.message || `HTTP error! status: ${response.status}`);
+                    }
                     return await response.json();
                 } catch (error) {
                     if (i === retries - 1) throw error;
@@ -385,9 +389,12 @@
             const prompt = `بصفتك خبير تربوي وموجه طلابي ذو خبرة في مدرسة متوسطة، يرجى تزويدي بـ 3 أفكار أو أنشطة مبتكرة وعملية لتنفيذ برنامج "${programName}". علماً بأن هذا البرنامج يخدم مؤشر الاعتماد المدرسي التالي: "${indicatorName}". 
             اكتب الأفكار باختصار وفي نقاط واضحة ومباشرة لتكون قابلة للتطبيق في البيئة المدرسية.`;
 
+            // التبديل التلقائي للنموذج المتاح للعامة إذا قمت بإدخال مفتاحك
+            const aiModel = apiKey ? 'gemini-1.5-flash' : 'gemini-2.5-flash-preview-09-2025';
+
             try {
                 const result = await fetchWithRetry(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -415,10 +422,14 @@
                     throw new Error("No text returned from Gemini");
                 }
             } catch (error) {
+                console.error("AI Error:", error);
                 contentDiv.innerHTML = `
                     <div class="text-red-500 bg-red-50 p-6 rounded-2xl text-center font-bold border border-red-100 shadow-sm">
                         <i data-lucide="alert-triangle" class="w-8 h-8 mx-auto mb-3 text-red-400"></i>
-                        عذراً، حدث خطأ أثناء الاتصال بالمساعد الذكي أو أن المفتاح غير متوفر. يرجى المحاولة لاحقاً.
+                        عذراً، حدث خطأ أثناء الاتصال بالمساعد الذكي.<br>
+                        <span class="text-sm mt-2 block font-medium text-red-400">
+                            ${apiKey === "" ? '⚠️ لم يتم العثور على مفتاح API في الكود. يرجى إضافته ليعمل خارج هذه المنصة.' : 'يرجى التأكد من صحة مفتاح API الخاص بك (API Key) في الكود.'}
+                        </span>
                     </div>`;
                 if(window.lucide) lucide.createIcons();
             }
